@@ -106,6 +106,11 @@ public class Grid : MonoBehaviour
 
     }
 
+    public Vector2 GetGridSize()
+    {
+        return new Vector2(gridSizeX, gridSizeY);
+    }
+
     void OnDrawGizmos()
     {
         Gizmos.DrawWireCube(transform.position, new Vector3(_gridWorldSize.x, 1, _gridWorldSize.y));

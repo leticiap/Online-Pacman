@@ -34,11 +34,13 @@ public class PlayerController : MonoBehaviour
         if (other.gameObject.tag == "pellet")
         {
             _score++;
+            Debug.Log(_score);
             Destroy(other.gameObject);
         }
         else if (other.gameObject.tag == "superPellet")
         {
             _score++;
+            Debug.Log(_score);
             _speed = 5.0f;
             StartCoroutine(SpeedTimer());
             Destroy(other.gameObject);
