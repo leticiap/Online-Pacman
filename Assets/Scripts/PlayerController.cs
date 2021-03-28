@@ -11,6 +11,8 @@ public class PlayerController : MonoBehaviour
     private Vector3 _newTranslation;
     private bool _isMoving;
     private Vector3 _targetPos;
+
+    private int _score = 0;
     // Start is called before the first frame update
     void Start()
     {
@@ -31,11 +33,15 @@ public class PlayerController : MonoBehaviour
     {
         if (other.gameObject.tag == "pellet")
         {
-            Debug.Log("Got Pellet");
+            _score++;
+            Destroy(other.gameObject);
         }
         else if (other.gameObject.tag == "superPellet")
         {
-            Debug.Log("Got Super Pellet");
+            _score++;
+            _speed = 5.0f;
+            StartCoroutine(SpeedTimer());
+            Destroy(other.gameObject);
         }
         else if (other.gameObject.tag == "ghost")
         {
@@ -43,6 +49,12 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+
+    private IEnumerator SpeedTimer()
+    {
+        yield return new WaitForSeconds(3.0f);
+        _speed = 3.0f;
+    }
 
     private void ManageInputs()
     {

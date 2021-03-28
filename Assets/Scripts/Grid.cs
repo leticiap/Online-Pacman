@@ -17,11 +17,6 @@ public class Grid : MonoBehaviour
     private float nodeDiameter;
     private int gridSizeX, gridSizeY;
 
-
-
-    private Node playerPos;
-    private Node targetPos;
-
     // Start is called before the first frame update
     void Start()
     {
@@ -29,8 +24,6 @@ public class Grid : MonoBehaviour
         gridSizeX = Mathf.RoundToInt(_gridWorldSize.x / nodeDiameter);
         gridSizeY = Mathf.RoundToInt(_gridWorldSize.y / nodeDiameter);
         CreateGrid();
-        playerPos = _grid[0, 0];
-        targetPos = _grid[0, 0];
     }
 
 
@@ -78,7 +71,6 @@ public class Grid : MonoBehaviour
     public bool MovementIsValid(Vector3 position, int x, int y)
     {
         Node n = GetNodeOnPosition(position);
-        playerPos = n;
         
         // check the special case of the border, to make it toroidal
         if (n.GetGridY() == 14)
@@ -94,7 +86,6 @@ public class Grid : MonoBehaviour
                     return true;
             }
         }
-        targetPos = _grid[n.GetGridX() + x, n.GetGridY() + y];
         return _grid[n.GetGridX() + x, n.GetGridY() + y].GetIsWalkable();
     }
 
@@ -124,10 +115,6 @@ public class Grid : MonoBehaviour
             foreach (Node n in _grid)
             {
                 Gizmos.color = n.GetIsWalkable() ? Color.white : Color.red;
-                if (n.GetGridX() == playerPos.GetGridX() && n.GetGridY() == playerPos.GetGridY())
-                    Gizmos.color = Color.green;
-                if (n.GetGridX() == targetPos.GetGridX() && n.GetGridY() == targetPos.GetGridY())
-                    Gizmos.color = Color.magenta;
                 Gizmos.DrawWireCube(n.GetPosition(), Vector3.one * (nodeDiameter - 0.05f));
             }
         }
