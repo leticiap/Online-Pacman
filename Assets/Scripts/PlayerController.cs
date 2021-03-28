@@ -1,9 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Photon.Pun;
 
-public class PlayerController : MonoBehaviour
+
+public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
 {
+    [Tooltip("The local player instance. Use this to know if the local player is represented in the Scene")]
+    public static GameObject LocalPlayerInstance;
+
     [SerializeField]
     private Grid _grid;
     private float _speed = 3.0f;
@@ -11,44 +16,115 @@ public class PlayerController : MonoBehaviour
     private Vector3 _newTranslation;
     private bool _isMoving;
     private Vector3 _targetPos;
-
+    private Animator animator;
     private int _score = 0;
+
+    [Tooltip("The Player's UI GameObject Prefab")]
+    [SerializeField]
+    public GameObject PlayerUiPrefab;
+
+    private GameObject _uiGo = null;
+
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    {
+        if (stream.IsWriting)
+        {
+            // We own this player: send the others our data
+            stream.SendNext(_score);
+        }
+        else
+        {
+            // Network player, receive data
+            this._score = (int)stream.ReceiveNext();
+        }
+        // TODO: See to refactor this, checking two times the same thing
+        if (stream.IsWriting)
+        {
+            // We own this player: send the others our data
+            stream.SendNext(_score);
+        }
+        else
+        {
+            // Network player, receive data
+            this._score = (int)stream.ReceiveNext();
+        }
+    }
+
+
+    void Awake()
+    {
+        // #Important
+        // used in GameManager.cs: we keep track of the localPlayer instance to prevent instantiation when levels are synchronized
+        if (photonView.IsMine)
+        {
+            PlayerController.LocalPlayerInstance = this.gameObject;
+        }
+        // #Critical
+        // we flag as don't destroy on load so that instance survives level synchronization, thus giving a seamless experience when levels load.
+        DontDestroyOnLoad(this.gameObject);
+
+        animator = GetComponent<Animator>();
+    }
+
     // Start is called before the first frame update
     void Start()
     {
         _translation = _newTranslation = Vector3.zero;
         _isMoving = false;
         _targetPos = transform.position;
+
+        // Unity 5.4 has a new scene management. register a method to call CalledOnLevelWasLoaded.
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+
+        if (PlayerUiPrefab != null && _uiGo == null)
+        {
+            _uiGo = Instantiate(PlayerUiPrefab);
+            _uiGo.SendMessage("SetTarget", this, SendMessageOptions.RequireReceiver);
+        }
+
+        _grid = FindObjectOfType<Grid>();
     }
 
     // Update is called once per frame
     void Update()
     {
-        ManageInputs();
-        ManageTranslation();
-        CheckBoundary();
+        if (photonView.IsMine)
+        {
+            ManageInputs();
+            ManageTranslation();
+            CheckBoundary();
+        }
     }
 
     private void OnTriggerEnter(Collider other)
     {
+
         if (other.gameObject.tag == "pellet")
         {
-            _score++;
-            Debug.Log(_score);
-            Destroy(other.gameObject);
+            if (photonView.IsMine)
+                _score++;
+
+            if (PhotonNetwork.IsMasterClient)
+                PhotonNetwork.Destroy(other.gameObject); 
+
         }
         else if (other.gameObject.tag == "superPellet")
         {
-            _score++;
-            Debug.Log(_score);
-            _speed = 5.0f;
-            StartCoroutine(SpeedTimer());
-            Destroy(other.gameObject);
+            if (photonView.IsMine)
+            {
+                _score++;
+                _speed = 5.0f;
+                StartCoroutine(SpeedTimer());
+            }
+            
+            if (PhotonNetwork.IsMasterClient)
+                PhotonNetwork.Destroy(other.gameObject);
         }
         else if (other.gameObject.tag == "ghost")
         {
             Debug.Log("Oh noes it's a ghost!");
         }
+
     }
 
 
@@ -135,5 +211,32 @@ public class PlayerController : MonoBehaviour
             _isMoving = true;
         }
             
+    }
+
+
+    void CalledOnLevelWasLoaded(int level)
+    {
+        // check if we are outside the Arena and if it's the case, spawn around the center of the arena in a safe zone
+        if (!Physics.Raycast(transform.position, -Vector3.up, 5f))
+        {
+            transform.position = new Vector3(0.5f, 0f, -10f);
+        }
+        if (PlayerUiPrefab != null && _uiGo == null)
+        {
+            _uiGo = Instantiate(PlayerUiPrefab);
+            _uiGo.SendMessage("SetTarget", this, SendMessageOptions.RequireReceiver);
+        }
+    }
+
+    public override void OnDisable()
+    {
+        // Always call the base to remove callbacks
+        base.OnDisable();
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode loadingMode)
+    {
+        this.CalledOnLevelWasLoaded(scene.buildIndex);
     }
 }
