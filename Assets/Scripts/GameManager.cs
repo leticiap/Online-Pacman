@@ -15,6 +15,10 @@ public class GameManager : MonoBehaviourPunCallbacks
     [Tooltip("The prefab to use for representing the super pellet")]
     [SerializeField]
     private GameObject _superPellectPrefab;
+    [Tooltip("The prefab to use for representing the ghost")]
+    [SerializeField]
+    private GameObject _ghostPrefab;
+
     private Grid _grid;
 
     void Start()
@@ -40,7 +44,11 @@ public class GameManager : MonoBehaviourPunCallbacks
 
         _grid = FindObjectOfType<Grid>();
         if (PhotonNetwork.IsMasterClient)
+        {
             SpawnPellets();
+            SpawnGhosts();
+        }
+            
     }
 
     public override void OnPlayerEnteredRoom(Player other)
@@ -114,6 +122,33 @@ public class GameManager : MonoBehaviourPunCallbacks
                     else
                         PhotonNetwork.Instantiate(_pelletPrefab.name, n.GetPosition(), Quaternion.identity);
                 }
+            }
+        }
+    }
+
+    private void SpawnGhosts()
+    {
+        // we create a total of 4 ghost, and we have two different behaviours, so there is at least one ghost of each type trying to ambush each player
+        GameObject[] _ghosts = new GameObject[4];
+        Vector3 ghostPosition = _grid.GetNodeOnPosition(12, 14).GetPosition();
+        for (int i = 0; i < _ghosts.Length; i++)
+            _ghosts[i] = PhotonNetwork.Instantiate(_ghostPrefab.name, ghostPosition + new Vector3(i, 0, 0), Quaternion.identity);
+        if (PhotonNetwork.CurrentRoom.PlayerCount == 1)
+        {
+            Transform playerPos = GameObject.FindGameObjectWithTag("Player").GetComponent<Transform>();
+            for (int i = 0; i < _ghosts.Length; i += 2)
+            {
+                _ghosts[i].GetComponent<GhostAI>().SetGhostParameters(playerPos, GhostAI.GhostBehaviour.Inky);
+                _ghosts[i + 1].GetComponent<GhostAI>().SetGhostParameters(playerPos, GhostAI.GhostBehaviour.Pinky);
+            }
+        }
+        else
+        {
+            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+            for (int i = 0; i < players.Length; i++)
+            {
+                _ghosts[i * 2].GetComponent<GhostAI>().SetGhostParameters(players[i].GetComponent<Transform>(), GhostAI.GhostBehaviour.Inky);
+                _ghosts[i * 2 + 1].GetComponent<GhostAI>().SetGhostParameters(players[i].GetComponent<Transform>(), GhostAI.GhostBehaviour.Pinky);
             }
         }
     }

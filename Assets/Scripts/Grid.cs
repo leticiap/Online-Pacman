@@ -53,7 +53,19 @@ public class Grid : MonoBehaviour
         {
             for (int y = -1; y <= 1; y++)
             {
+                
+                if (node.GetGridY() == 14)
+                {
+                    if (node.GetGridX() == 27)
+                        neighbours.Add(_grid[0, 14]);
+                    else if (node.GetGridX() == 0)
+                        neighbours.Add(_grid[27, 14]);
+                }
+                
+
                 if (x == 0 && y == 0)
+                    continue;
+                if (x != 0 && y != 0)
                     continue;
 
                 int checkX = node.GetGridX() + x;

@@ -46,3 +46,4 @@ MonoBehaviour:
   playerPrefab: {fileID: 8771359986761777974, guid: 69f2ceb940950d74ea15566b6b899b78, type: 3}
   _pelletPrefab: {fileID: 970490112924816258, guid: f07c3a88e15538f4998661fd679db17d, type: 3}
   _superPellectPrefab: {fileID: 6958709553116291674, guid: 207ef2921859cf740b840e7d8fc6aaa4, type: 3}
+  _ghostPrefab: {fileID: 4126230892785595230, guid: e13ca41ede5e2f74dab695d7ccd5a3f0, type: 3}
