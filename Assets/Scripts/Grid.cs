@@ -18,6 +18,7 @@ public class Grid : MonoBehaviour
     private int gridSizeX, gridSizeY;
 
     public Node pinkyTarget;
+    public Node inkyTarget;
 
     // Start is called before the first frame update
     void Awake()
@@ -143,6 +144,9 @@ public class Grid : MonoBehaviour
                 if (pinkyTarget != null)
                     if (pinkyTarget.GetGridX() == n.GetGridX() && pinkyTarget.GetGridY() == n.GetGridY())
                         Gizmos.color = Color.magenta;
+                if (inkyTarget != null)
+                    if (inkyTarget.GetGridX() == n.GetGridX() && inkyTarget.GetGridY() == n.GetGridY())
+                        Gizmos.color = Color.blue;
                 Gizmos.DrawWireCube(n.GetPosition(), Vector3.one * (nodeDiameter - 0.05f));
             }
         }

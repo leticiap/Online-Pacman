@@ -17,7 +17,7 @@ public class GhostAI : MonoBehaviourPunCallbacks
     private Vector3 _newTargetPos;
     private Vector3 _translation;
     private Vector3 _newTranslation;
-    private float _speed = 3.0f;
+    private float _speed = 2.5f;
     private bool _start = false;
 
     // Start is called before the first frame update
@@ -144,7 +144,6 @@ public class GhostAI : MonoBehaviourPunCallbacks
                 transform.position = _grid.GetNodeOnPosition(_targetPos).GetPosition();
                 _isMoving = false;
             }
-            _grid.pinkyTarget = _grid.GetNodeOnPosition(_targetPos);
         }
         else
         {
@@ -177,11 +176,22 @@ public class GhostAI : MonoBehaviourPunCallbacks
                 // Pinky will try tro predict where the player is going, and ambush him 4 or less tiles ahead.
                 // If the tile he is targeting is not a valid tile to move, he will try to ambush on the tile of the direction -1
                 targetPos = CalculatePinkyTarget(playerPos);
+                _grid.pinkyTarget = _grid.GetNodeOnPosition(targetPos);
                 break;
             case GhostBehaviour.Inky:
                 // Inky will calculate the distance between Pinky and its target, then,
                 // it will proceed to set its target as 2*distance(pinky, target)
-                targetPos = playerPos;
+                Vector3 pinkyTarget = CalculatePinkyTarget(playerPos);
+                Vector3 distance = pinkyTarget - transform.position;
+                float maxDist = 2.0f;
+                Node target = _grid.GetNodeOnPosition(distance *maxDist + transform.position);
+                while (!target.GetIsWalkable())
+                {
+                    maxDist -= 0.1f;
+                    target = _grid.GetNodeOnPosition(distance * maxDist + transform.position);
+                }
+                _grid.inkyTarget = target;
+                targetPos = target.GetPosition();
                 break;
             default:
                 targetPos = playerPos;
@@ -212,10 +222,7 @@ public class GhostAI : MonoBehaviourPunCallbacks
             else if (newPosX > 23)
                 newPosX = 27;
         }
-        Node pinkyTarget = _grid.GetNodeOnPosition(newPosX, newPosY);
-        pinkyTarget = _grid.GetNodeOnPosition(targetPos);
-        //_grid.pinkyTarget = pinkyTarget;
-        return pinkyTarget.GetPosition();
+        return _grid.GetNodeOnPosition(newPosX, newPosY).GetPosition();
     }
 
     private bool Arrived2Target(Vector3 targetPos)
