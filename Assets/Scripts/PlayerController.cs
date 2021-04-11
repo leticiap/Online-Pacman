@@ -231,11 +231,7 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
         _score = 0;
         _speed = 3.0f;
 
-        _grid = FindObjectOfType<Grid>();
-
-       // if (PhotonNetwork.IsMasterClient && photonView.IsMine)
-           // GameManager.Instance.ResetLevel();
-            
+        _grid = FindObjectOfType<Grid>();            
     }
 
     public override void OnDisable()

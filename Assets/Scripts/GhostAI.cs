@@ -12,16 +12,19 @@ public class GhostAI : MonoBehaviourPunCallbacks
     private GhostBehaviour _behaviour;
 
     // To handle the moviment
-    private bool _isMoving;
+    private bool _isMoving = false;
     private Vector3 _targetPos;
+    private Vector3 _newTargetPos;
     private Vector3 _translation;
-    private float _speed = 2.0f;
+    private Vector3 _newTranslation;
+    private float _speed = 3.0f;
     private bool _start = false;
 
     // Start is called before the first frame update
     void Start()
     {
         _grid = FindObjectOfType<Grid>();
+        _targetPos = transform.position;
     }
 
     // Update is called once per frame
@@ -120,7 +123,8 @@ public class GhostAI : MonoBehaviourPunCallbacks
         {
             Node start = path[0];
             Node finish = path[1];
-            _translation = new Vector3(finish.GetGridX() - start.GetGridX(), 0, finish.GetGridY() - start.GetGridY());
+            _newTranslation = new Vector3(finish.GetGridX() - start.GetGridX(), 0, finish.GetGridY() - start.GetGridY());
+            _newTargetPos = finish.GetPosition();
         }
 
     }
@@ -140,28 +144,13 @@ public class GhostAI : MonoBehaviourPunCallbacks
                 transform.position = _grid.GetNodeOnPosition(_targetPos).GetPosition();
                 _isMoving = false;
             }
+            _grid.pinkyTarget = _grid.GetNodeOnPosition(_targetPos);
         }
         else
         {
-            Vector2 newDir = new Vector2(_translation.x, _translation.z);
-            // check the new position we are going to move, and set it as the target
-            if (newDir.sqrMagnitude != 0 && _grid.MovementIsValid(transform.position, (int)newDir.x, (int)newDir.y))
-            {
-                Node currentPos = _grid.GetNodeOnPosition(transform.position);
-                Node newPos = _grid.GetNodeOnPosition(currentPos.GetGridX() + (int)newDir.x, currentPos.GetGridY() + (int)newDir.y);
-                if (newPos != null)
-                {
-                    _isMoving = true;
-                    _targetPos = newPos.GetPosition();
-                }
-                // we have the special case to get around the arena
-                else
-                {
-                    Debug.Log(_targetPos);
-                    _isMoving = true;
-                    _targetPos += _translation;
-                }
-            }
+            _targetPos = _newTargetPos;
+            _translation = _newTranslation;
+            _isMoving = true;
         }
 
     }
@@ -225,7 +214,7 @@ public class GhostAI : MonoBehaviourPunCallbacks
         }
         Node pinkyTarget = _grid.GetNodeOnPosition(newPosX, newPosY);
         pinkyTarget = _grid.GetNodeOnPosition(targetPos);
-        _grid.pinkyTarget = pinkyTarget;
+        //_grid.pinkyTarget = pinkyTarget;
         return pinkyTarget.GetPosition();
     }
 

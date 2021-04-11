@@ -90,7 +90,7 @@ public class GameManager : MonoBehaviourPunCallbacks
     }
 
 
-
+    /*
     public void ResetLevel()
     {
         // reset everything
@@ -112,7 +112,7 @@ public class GameManager : MonoBehaviourPunCallbacks
             SpawnGhosts();
         }
     }
-
+    */
     void LoadArena()
     {
         if (!PhotonNetwork.IsMasterClient)
