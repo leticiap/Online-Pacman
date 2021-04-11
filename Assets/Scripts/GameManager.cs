@@ -1,5 +1,6 @@
 using Photon.Pun;
 using Photon.Realtime;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -20,6 +21,9 @@ public class GameManager : MonoBehaviourPunCallbacks
     private GameObject _ghostPrefab;
 
     private Grid _grid;
+
+    [SerializeField]
+    private int indexScene;
 
     void Start()
     {
@@ -46,7 +50,7 @@ public class GameManager : MonoBehaviourPunCallbacks
         if (PhotonNetwork.IsMasterClient)
         {
             SpawnPellets();
-            SpawnGhosts();
+            StartCoroutine(SpawnGhosts());
         }
             
     }
@@ -83,6 +87,30 @@ public class GameManager : MonoBehaviourPunCallbacks
     public void LeaveRoom()
     {
         PhotonNetwork.LeaveRoom();
+    }
+
+
+
+    public void ResetLevel()
+    {
+        // reset everything
+        _grid = FindObjectOfType<Grid>();
+        if (PhotonNetwork.IsMasterClient)
+        {
+            GameObject[] pellets = GameObject.FindGameObjectsWithTag("pellet");
+            foreach (GameObject pellet in pellets)
+                PhotonNetwork.Destroy(pellet);
+            pellets = GameObject.FindGameObjectsWithTag("superPellet");
+            foreach (GameObject pellet in pellets)
+                PhotonNetwork.Destroy(pellet);
+            GameObject[] ghosts = GameObject.FindGameObjectsWithTag("ghost");
+            foreach (GameObject ghost in ghosts)
+                PhotonNetwork.Destroy(ghost);
+
+            _grid = FindObjectOfType<Grid>();
+            SpawnPellets();
+            SpawnGhosts();
+        }
     }
 
     void LoadArena()
@@ -126,8 +154,11 @@ public class GameManager : MonoBehaviourPunCallbacks
         }
     }
 
-    private void SpawnGhosts()
+    private IEnumerator SpawnGhosts()
     {
+        // wait the scene load
+        yield return new WaitForSeconds(0.3f);
+
         // we create a total of 4 ghost, and we have two different behaviours, so there is at least one ghost of each type trying to ambush each player
         GameObject[] _ghosts = new GameObject[4];
         Vector3 ghostPosition = _grid.GetNodeOnPosition(12, 14).GetPosition();
@@ -135,11 +166,11 @@ public class GameManager : MonoBehaviourPunCallbacks
             _ghosts[i] = PhotonNetwork.Instantiate(_ghostPrefab.name, ghostPosition + new Vector3(i, 0, 0), Quaternion.identity);
         if (PhotonNetwork.CurrentRoom.PlayerCount == 1)
         {
-            Transform playerPos = GameObject.FindGameObjectWithTag("Player").GetComponent<Transform>();
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
             for (int i = 0; i < _ghosts.Length; i += 2)
             {
-                _ghosts[i].GetComponent<GhostAI>().SetGhostParameters(playerPos, GhostAI.GhostBehaviour.Inky);
-                _ghosts[i + 1].GetComponent<GhostAI>().SetGhostParameters(playerPos, GhostAI.GhostBehaviour.Pinky);
+                _ghosts[i].GetComponent<GhostAI>().SetGhostParameters(player, GhostAI.GhostBehaviour.Inky);
+                _ghosts[i + 1].GetComponent<GhostAI>().SetGhostParameters(player, GhostAI.GhostBehaviour.Pinky);
             }
         }
         else
@@ -147,8 +178,9 @@ public class GameManager : MonoBehaviourPunCallbacks
             GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
             for (int i = 0; i < players.Length; i++)
             {
-                _ghosts[i * 2].GetComponent<GhostAI>().SetGhostParameters(players[i].GetComponent<Transform>(), GhostAI.GhostBehaviour.Inky);
-                _ghosts[i * 2 + 1].GetComponent<GhostAI>().SetGhostParameters(players[i].GetComponent<Transform>(), GhostAI.GhostBehaviour.Pinky);
+                Debug.LogWarning("kaissara " + players.Length);
+                _ghosts[i * 2].GetComponent<GhostAI>().SetGhostParameters(players[i], GhostAI.GhostBehaviour.Inky);
+                _ghosts[i * 2 + 1].GetComponent<GhostAI>().SetGhostParameters(players[i], GhostAI.GhostBehaviour.Pinky);
             }
         }
     }

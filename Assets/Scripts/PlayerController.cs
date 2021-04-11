@@ -101,11 +101,12 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
 
         if (other.gameObject.tag == "pellet")
         {
+            Debug.Log(_score);
             if (photonView.IsMine)
                 _score++;
 
             if (PhotonNetwork.IsMasterClient)
-                PhotonNetwork.Destroy(other.gameObject); 
+                PhotonNetwork.Destroy(other.gameObject);
 
         }
         else if (other.gameObject.tag == "superPellet")
@@ -116,7 +117,7 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
                 _speed = 5.0f;
                 StartCoroutine(SpeedTimer());
             }
-            
+
             if (PhotonNetwork.IsMasterClient)
                 PhotonNetwork.Destroy(other.gameObject);
         }
@@ -162,18 +163,18 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
 
     private void ManageTranslation()
     {
-        
+
         if (_isMoving)
         {
-             // check if we arrived to the target, and if yes, stop
-             Vector3 difference = _targetPos - transform.position;
-             if (difference.sqrMagnitude > 0.05)
+            // check if we arrived to the target, and if yes, stop
+            Vector3 difference = _targetPos - transform.position;
+            if (difference.sqrMagnitude > 0.05)
                 transform.Translate(_speed * Time.deltaTime * _translation);
-             else
-             {
+            else
+            {
                 transform.position = _targetPos;
                 _isMoving = false;
-             }
+            }
         }
         else
         {
@@ -191,16 +192,15 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
                 // we have the special case to get around the arena
                 else
                 {
-                    Debug.Log(_targetPos);
                     _isMoving = true;
                     _targetPos += _translation;
                 }
             }
         }
-            
+
     }
-    
-    
+
+
     private void CheckBoundary()
     {
         if (transform.position.x > 14 || transform.position.x < -14)
@@ -210,22 +210,32 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
             _targetPos = transform.position;
             _isMoving = true;
         }
-            
-    }
 
+    }
+    public Vector3 GetPlayerDirection() { return _translation; }
 
     void CalledOnLevelWasLoaded(int level)
     {
-        // check if we are outside the Arena and if it's the case, spawn around the center of the arena in a safe zone
-        if (!Physics.Raycast(transform.position, -Vector3.up, 5f))
-        {
-            transform.position = new Vector3(0.5f, 0f, -10f);
-        }
+
+        transform.position = new Vector3(0.5f, 0f, -10f);
         if (PlayerUiPrefab != null && _uiGo == null)
         {
             _uiGo = Instantiate(PlayerUiPrefab);
             _uiGo.SendMessage("SetTarget", this, SendMessageOptions.RequireReceiver);
         }
+
+        // Make sure to reset all the configurations
+        _translation = _newTranslation = Vector3.zero;
+        _isMoving = false;
+        _targetPos = transform.position;
+        _score = 0;
+        _speed = 3.0f;
+
+        _grid = FindObjectOfType<Grid>();
+
+       // if (PhotonNetwork.IsMasterClient && photonView.IsMine)
+           // GameManager.Instance.ResetLevel();
+            
     }
 
     public override void OnDisable()
@@ -237,6 +247,6 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
 
     void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode loadingMode)
     {
-        this.CalledOnLevelWasLoaded(scene.buildIndex);
+        CalledOnLevelWasLoaded(scene.buildIndex);
     }
 }

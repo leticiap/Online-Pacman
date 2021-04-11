@@ -7,7 +7,8 @@ public class GhostAI : MonoBehaviourPunCallbacks
 {
     public enum GhostBehaviour { Pinky, Inky };
     private Grid _grid;
-    private Transform _targetTransform;
+    [SerializeField]
+    private GameObject _targetGO;
     private GhostBehaviour _behaviour;
 
     // To handle the moviment
@@ -28,16 +29,21 @@ public class GhostAI : MonoBehaviourPunCallbacks
     {
         if (PhotonNetwork.IsMasterClient && _start)
         {
-            FindPath(transform.position, _targetTransform.position);
-            ManageTranslation();
-            CheckBoundary();
+            Vector3 targetPos = SelectTarget();
+            if (!Arrived2Target(targetPos))
+            {
+                FindPath(transform.position, targetPos);
+                ManageTranslation();
+                CheckBoundary();
+            }
+            
         }
     }
 
 
-    public void SetGhostParameters(Transform playerTransform, GhostBehaviour type)
+    public void SetGhostParameters(GameObject player, GhostBehaviour type)
     {
-        _targetTransform = playerTransform;
+        _targetGO = player;
         _behaviour = type;
         _start = true;
     }
@@ -93,7 +99,6 @@ public class GhostAI : MonoBehaviourPunCallbacks
 
             }
         }
-
     }
 
     // Method used to return the path formed by the A*
@@ -117,8 +122,7 @@ public class GhostAI : MonoBehaviourPunCallbacks
             Node finish = path[1];
             _translation = new Vector3(finish.GetGridX() - start.GetGridX(), 0, finish.GetGridY() - start.GetGridY());
         }
-        //_playerController.SetPath(path);
-        //graph.SetPath(path);
+
     }
 
     private void ManageTranslation()
@@ -132,7 +136,8 @@ public class GhostAI : MonoBehaviourPunCallbacks
                 transform.Translate(_speed * Time.deltaTime * _translation);
             else
             {
-                transform.position = _targetPos;
+                // to guarantee that it will be exactly on the centre of the tile
+                transform.position = _grid.GetNodeOnPosition(_targetPos).GetPosition();
                 _isMoving = false;
             }
         }
@@ -165,11 +170,69 @@ public class GhostAI : MonoBehaviourPunCallbacks
     {
         if (transform.position.x > 14 || transform.position.x < -14)
         {
-            float newX = transform.position.x * -1 + 0.1f * _translation.x;
+            float newX = transform.position.x * -1 + 0.5f * _translation.x;
             transform.position = new Vector3(newX, transform.position.y, transform.position.z);
             _targetPos = transform.position;
             _isMoving = true;
         }
 
+    }
+
+    private Vector3 SelectTarget()
+    {
+        Vector3 targetPos;
+        Vector3 playerPos = _targetGO.transform.position;
+        switch (_behaviour)
+        {
+            case GhostBehaviour.Pinky:
+                // Pinky will try tro predict where the player is going, and ambush him 4 or less tiles ahead.
+                // If the tile he is targeting is not a valid tile to move, he will try to ambush on the tile of the direction -1
+                targetPos = CalculatePinkyTarget(playerPos);
+                break;
+            case GhostBehaviour.Inky:
+                // Inky will calculate the distance between Pinky and its target, then,
+                // it will proceed to set its target as 2*distance(pinky, target)
+                targetPos = playerPos;
+                break;
+            default:
+                targetPos = playerPos;
+                break;
+        }
+        return targetPos;
+    }
+
+    private Vector3 CalculatePinkyTarget(Vector3 targetPos)
+    {
+        Vector3 targetDirection = _targetGO.GetComponent<PlayerController>().GetPlayerDirection();
+        int i = 4;
+        Vector2 potentialTarget = new Vector2(targetDirection.x * i, (int)targetDirection.z * i);
+        while (!_grid.MovementIsValid(targetPos, (int)potentialTarget.x, (int)potentialTarget.y))
+        {
+            i--;
+            potentialTarget = new Vector2(targetDirection.x * i, (int)targetDirection.z * i);
+        }
+        Node playerOnGrid = _grid.GetNodeOnPosition(targetPos);
+
+        int newPosX = playerOnGrid.GetGridX() + (int)potentialTarget.x;
+        int newPosY = playerOnGrid.GetGridY() + (int)potentialTarget.y;
+        // check the boundaries, as they work differently
+        if (newPosY == 14)
+        {
+            if (newPosX < 4)
+                newPosX = 0;
+            else if (newPosX > 23)
+                newPosX = 27;
+        }
+        Node pinkyTarget = _grid.GetNodeOnPosition(newPosX, newPosY);
+        pinkyTarget = _grid.GetNodeOnPosition(targetPos);
+        _grid.pinkyTarget = pinkyTarget;
+        return pinkyTarget.GetPosition();
+    }
+
+    private bool Arrived2Target(Vector3 targetPos)
+    {
+        Node current = _grid.GetNodeOnPosition(transform.position);
+        Node tgt = _grid.GetNodeOnPosition(targetPos);
+        return (current.GetGridX() == tgt.GetGridX() && current.GetGridY() == tgt.GetGridY());
     }
 }

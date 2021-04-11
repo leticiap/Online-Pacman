@@ -17,8 +17,10 @@ public class Grid : MonoBehaviour
     private float nodeDiameter;
     private int gridSizeX, gridSizeY;
 
+    public Node pinkyTarget;
+
     // Start is called before the first frame update
-    void Start()
+    void Awake()
     {
         nodeDiameter = _nodeRadius * 2;
         gridSizeX = Mathf.RoundToInt(_gridWorldSize.x / nodeDiameter);
@@ -98,7 +100,13 @@ public class Grid : MonoBehaviour
                     return true;
             }
         }
-        return _grid[n.GetGridX() + x, n.GetGridY() + y].GetIsWalkable();
+        int newX = n.GetGridX() + x;
+        int newY = n.GetGridY() + y;
+        // if it is inside the boundaries of the game
+        if (newX >= 0 && newX < gridSizeX && newY >= 0 && newY < gridSizeY)
+            return _grid[newX, newY].GetIsWalkable();
+        else
+            return false;
     }
 
     private void CreateGrid()
@@ -132,6 +140,9 @@ public class Grid : MonoBehaviour
             foreach (Node n in _grid)
             {
                 Gizmos.color = n.GetIsWalkable() ? Color.white : Color.red;
+                if (pinkyTarget != null)
+                    if (pinkyTarget.GetGridX() == n.GetGridX() && pinkyTarget.GetGridY() == n.GetGridY())
+                        Gizmos.color = Color.magenta;
                 Gizmos.DrawWireCube(n.GetPosition(), Vector3.one * (nodeDiameter - 0.05f));
             }
         }
