@@ -17,14 +17,16 @@ public class GhostAI : MonoBehaviourPunCallbacks
     private Vector3 _newTargetPos;
     private Vector3 _translation;
     private Vector3 _newTranslation;
-    private float _speed = 2.5f;
+    private float _speed = 2.8f;
     private bool _start = false;
 
     // Start is called before the first frame update
     void Start()
     {
         _grid = FindObjectOfType<Grid>();
-        _targetPos = transform.position;
+        _targetPos = transform.position + new Vector3(0, 0, -2);
+        _translation = -Vector3.forward;
+        _isMoving = true;
     }
 
     // Update is called once per frame
@@ -148,7 +150,8 @@ public class GhostAI : MonoBehaviourPunCallbacks
         else
         {
             _targetPos = _newTargetPos;
-            _translation = _newTranslation;
+            if (Mathf.Abs(_newTranslation.x) < 2.0f )
+                _translation = _newTranslation;
             _isMoving = true;
         }
 
@@ -161,13 +164,26 @@ public class GhostAI : MonoBehaviourPunCallbacks
             float newX = transform.position.x * -1 + 0.5f * _translation.x;
             transform.position = new Vector3(newX, transform.position.y, transform.position.z);
             _targetPos = transform.position;
-            _isMoving = true;
         }
 
     }
 
     private Vector3 SelectTarget()
     {
+        if (_targetGO.GetComponent<PlayerController>().IsInvincible())
+        {
+            Vector2 gridSize = _grid.GetGridSize();
+            int randX = (int) Random.Range(0, gridSize.x);
+            int randY = (int) Random.Range(0, gridSize.y);
+            while (!_grid.GetNodeOnPosition(randX, randY).GetIsWalkable())
+            {
+                randX = (int)Random.Range(0, gridSize.x);
+                randY = (int)Random.Range(0, gridSize.y);
+            }
+
+            _grid.inkyTarget = _grid.pinkyTarget = _grid.GetNodeOnPosition(randX, randY);
+            return _grid.GetNodeOnPosition(randX, randY).GetPosition();
+        }
         Vector3 targetPos;
         Vector3 playerPos = _targetGO.transform.position;
         switch (_behaviour)
@@ -175,6 +191,13 @@ public class GhostAI : MonoBehaviourPunCallbacks
             case GhostBehaviour.Pinky:
                 // Pinky will try tro predict where the player is going, and ambush him 4 or less tiles ahead.
                 // If the tile he is targeting is not a valid tile to move, he will try to ambush on the tile of the direction -1
+                Vector3 distanceFromPlayer = playerPos - transform.position;
+                if (distanceFromPlayer.sqrMagnitude <= 4)
+                {
+                    targetPos = playerPos;
+                    _grid.pinkyTarget = _grid.GetNodeOnPosition(playerPos);
+                    break;
+                }
                 targetPos = CalculatePinkyTarget(playerPos);
                 _grid.pinkyTarget = _grid.GetNodeOnPosition(targetPos);
                 break;

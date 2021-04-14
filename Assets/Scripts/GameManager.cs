@@ -25,6 +25,8 @@ public class GameManager : MonoBehaviourPunCallbacks
     [SerializeField]
     private int indexScene;
 
+    private bool _gameEnded = false;
+
     void Start()
     {
         Instance = this;
@@ -55,6 +57,36 @@ public class GameManager : MonoBehaviourPunCallbacks
             
     }
 
+    private void Update()
+    {
+        GameObject[] pellets = GameObject.FindGameObjectsWithTag("superPellet");
+        if (!_gameEnded && pellets.Length == 0)
+        {
+            pellets = GameObject.FindGameObjectsWithTag("pellet");
+            if (pellets.Length == 0)
+            {
+                _gameEnded = true;
+                GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+                int highScore = players[0].GetComponent<PlayerController>().GetScore();
+                string name = players[0].GetComponent<PlayerController>().GetPlayerName();
+                for (int i = 1; i < players.Length; i++)
+                {
+                    if (players[i].GetComponent<PlayerController>().GetScore() > highScore)
+                    {
+                        highScore = players[i].GetComponent<PlayerController>().GetScore();
+                        name = players[i].GetComponent<PlayerController>().GetPlayerName();
+
+                    }
+                }
+                Winner winner = GameObject.FindGameObjectWithTag("playerName").GetComponent<Winner>();
+                winner.winnerName = name;
+                winner.score = highScore;
+                LeaveRoom();
+            }
+                
+        }
+    }
+
     public override void OnPlayerEnteredRoom(Player other)
     {
         Debug.LogFormat("OnPlayerEnteredRoom() {0}", other.NickName); // not seen if you're the player connecting
@@ -80,7 +112,10 @@ public class GameManager : MonoBehaviourPunCallbacks
     /// </summary>
     public override void OnLeftRoom()
     {
-        SceneManager.LoadScene(0);
+        if (_gameEnded)
+            SceneManager.LoadScene(3);
+        else
+            SceneManager.LoadScene(0);
     }
 
 
@@ -161,9 +196,9 @@ public class GameManager : MonoBehaviourPunCallbacks
 
         // we create a total of 4 ghost, and we have two different behaviours, so there is at least one ghost of each type trying to ambush each player
         GameObject[] _ghosts = new GameObject[4];
-        Vector3 ghostPosition = _grid.GetNodeOnPosition(12, 14).GetPosition();
+        Vector3 ghostPosition = _grid.GetNodeOnPosition(13, 13).GetPosition();
         for (int i = 0; i < _ghosts.Length; i++)
-            _ghosts[i] = PhotonNetwork.Instantiate(_ghostPrefab.name, ghostPosition + new Vector3(i, 0, 0), Quaternion.identity);
+            _ghosts[i] = PhotonNetwork.Instantiate(_ghostPrefab.name, ghostPosition + new Vector3((int) i/2, 0, i % 2), Quaternion.identity);
         if (PhotonNetwork.CurrentRoom.PlayerCount == 1)
         {
             GameObject player = GameObject.FindGameObjectWithTag("Player");

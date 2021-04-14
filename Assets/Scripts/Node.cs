@@ -26,7 +26,6 @@ public class Node
     public float gCost() { return _gCost; }
     public float hCost() { return _hCost; }
     public float fCost() { return _gCost + _hCost; }
-
     public void SetGCost(float g) { _gCost = g; }
     public void SetHCost(float h) { _hCost = h; }
 }

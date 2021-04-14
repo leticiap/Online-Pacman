@@ -9,7 +9,6 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
     [Tooltip("The local player instance. Use this to know if the local player is represented in the Scene")]
     public static GameObject LocalPlayerInstance;
 
-    [SerializeField]
     private Grid _grid;
     private float _speed = 3.0f;
     private Vector3 _translation;
@@ -18,6 +17,8 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
     private Vector3 _targetPos;
     private Animator animator;
     private int _score = 0;
+    private bool _invincible = false;
+    private Vector3 _initialPos;
 
     [Tooltip("The Player's UI GameObject Prefab")]
     [SerializeField]
@@ -64,6 +65,7 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
         DontDestroyOnLoad(this.gameObject);
 
         animator = GetComponent<Animator>();
+        _initialPos = new Vector3(0.5f, 0f, -10f);
     }
 
     // Start is called before the first frame update
@@ -123,11 +125,24 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
         }
         else if (other.gameObject.tag == "ghost")
         {
-            Debug.Log("Oh noes it's a ghost!");
+            if (!_invincible)
+            {
+                transform.position = _initialPos;
+                _translation = _newTranslation = Vector3.zero;
+                _isMoving = false;
+                _targetPos = transform.position;
+                _invincible = true;
+                StartCoroutine(InvincibleTimer());
+            }
         }
 
     }
 
+    private IEnumerator InvincibleTimer()
+    {
+        yield return new WaitForSeconds(3.0f);
+        _invincible = false;
+    }
 
     private IEnumerator SpeedTimer()
     {
@@ -217,7 +232,7 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
     void CalledOnLevelWasLoaded(int level)
     {
 
-        transform.position = new Vector3(0.5f, 0f, -10f);
+        transform.position = _initialPos;
         if (PlayerUiPrefab != null && _uiGo == null)
         {
             _uiGo = Instantiate(PlayerUiPrefab);
@@ -244,5 +259,20 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
     void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode loadingMode)
     {
         CalledOnLevelWasLoaded(scene.buildIndex);
+    }
+
+    public bool IsInvincible()
+    {
+        return _invincible;
+    }
+
+    public int GetScore()
+    {
+        return _score;
+    }
+
+    public string GetPlayerName()
+    {
+        return photonView.Owner.NickName;
     }
 }
