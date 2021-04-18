@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GhostAI : MonoBehaviourPunCallbacks
+public class GhostAI : MonoBehaviourPunCallbacks, IPunObservable
 {
     public enum GhostBehaviour { Pinky, Inky };
     private Grid _grid;
@@ -20,13 +20,35 @@ public class GhostAI : MonoBehaviourPunCallbacks
     private float _speed = 2.8f;
     private bool _start = false;
 
+    [SerializeField]
+    private Material _inkyMaterial;
+
+
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    {
+        if (stream.IsWriting && PhotonNetwork.IsMasterClient)
+        {
+            // We own this player: send the others our data
+            stream.SendNext(_behaviour);
+        }
+        else
+        {
+            // Network player, receive data
+            this._behaviour = (GhostBehaviour) stream.ReceiveNext();
+        }
+    }
+
     // Start is called before the first frame update
     void Start()
     {
         _grid = FindObjectOfType<Grid>();
         _targetPos = transform.position + new Vector3(0, 0, -2);
-        _translation = -Vector3.forward;
+        _translation = Vector3.up;
         _isMoving = true;
+
+        if(_behaviour == GhostBehaviour.Inky)
+            GetComponent<Renderer>().material = _inkyMaterial;
+
     }
 
     // Update is called once per frame
@@ -42,6 +64,11 @@ public class GhostAI : MonoBehaviourPunCallbacks
                 CheckBoundary();
             }
             
+        }
+        else
+        {
+            if (_behaviour == GhostBehaviour.Inky)
+                GetComponent<Renderer>().material = _inkyMaterial;
         }
     }
 
@@ -125,7 +152,7 @@ public class GhostAI : MonoBehaviourPunCallbacks
         {
             Node start = path[0];
             Node finish = path[1];
-            _newTranslation = new Vector3(finish.GetGridX() - start.GetGridX(), 0, finish.GetGridY() - start.GetGridY());
+            _newTranslation = new Vector3(finish.GetGridX() - start.GetGridX(), - (finish.GetGridY() - start.GetGridY()), 0);
             _newTargetPos = finish.GetPosition();
         }
 

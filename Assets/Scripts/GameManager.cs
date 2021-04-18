@@ -27,8 +27,12 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     private bool _gameEnded = false;
 
+    private bool _pelletsSpawned = false;
+
     void Start()
     {
+        Cursor.visible = false;
+
         Instance = this;
         if (playerPrefab == null)
         {
@@ -39,8 +43,9 @@ public class GameManager : MonoBehaviourPunCallbacks
             if (PlayerController.LocalPlayerInstance == null)
             {
                 Debug.LogFormat("We are Instantiating LocalPlayer from {0}", SceneManagerHelper.ActiveSceneName);
+                Quaternion rotation = new Quaternion(0, 0, 0.707106829f, 0.707106829f);
                 // we're in a room. spawn a character for the local player. it gets synced by using PhotonNetwork.Instantiate
-                PhotonNetwork.Instantiate(this.playerPrefab.name, new Vector3(0.5f, 0f, -10f), Quaternion.identity, 0);
+                PhotonNetwork.Instantiate(this.playerPrefab.name, new Vector3(0.5f, 0f, -10f), rotation, 0);
             }
             else
             {
@@ -52,6 +57,7 @@ public class GameManager : MonoBehaviourPunCallbacks
         if (PhotonNetwork.IsMasterClient)
         {
             SpawnPellets();
+            _pelletsSpawned = true;
             StartCoroutine(SpawnGhosts());
         }
             
@@ -59,8 +65,9 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     private void Update()
     {
+        // To check if the game has ended
         GameObject[] pellets = GameObject.FindGameObjectsWithTag("superPellet");
-        if (!_gameEnded && pellets.Length == 0)
+        if (_pelletsSpawned && !_gameEnded && pellets.Length == 0)
         {
             pellets = GameObject.FindGameObjectsWithTag("pellet");
             if (pellets.Length == 0)
@@ -197,8 +204,9 @@ public class GameManager : MonoBehaviourPunCallbacks
         // we create a total of 4 ghost, and we have two different behaviours, so there is at least one ghost of each type trying to ambush each player
         GameObject[] _ghosts = new GameObject[4];
         Vector3 ghostPosition = _grid.GetNodeOnPosition(13, 13).GetPosition();
+        Quaternion rotation = new Quaternion(-0.707106829f, 0, 0, 0.707106829f);
         for (int i = 0; i < _ghosts.Length; i++)
-            _ghosts[i] = PhotonNetwork.Instantiate(_ghostPrefab.name, ghostPosition + new Vector3((int) i/2, 0, i % 2), Quaternion.identity);
+            _ghosts[i] = PhotonNetwork.Instantiate(_ghostPrefab.name, ghostPosition + new Vector3((int) i/2, 0, i % 2), rotation);
         if (PhotonNetwork.CurrentRoom.PlayerCount == 1)
         {
             GameObject player = GameObject.FindGameObjectWithTag("Player");
@@ -213,7 +221,6 @@ public class GameManager : MonoBehaviourPunCallbacks
             GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
             for (int i = 0; i < players.Length; i++)
             {
-                Debug.LogWarning("kaissara " + players.Length);
                 _ghosts[i * 2].GetComponent<GhostAI>().SetGhostParameters(players[i], GhostAI.GhostBehaviour.Inky);
                 _ghosts[i * 2 + 1].GetComponent<GhostAI>().SetGhostParameters(players[i], GhostAI.GhostBehaviour.Pinky);
             }

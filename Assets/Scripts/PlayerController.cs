@@ -15,7 +15,6 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
     private Vector3 _newTranslation;
     private bool _isMoving;
     private Vector3 _targetPos;
-    private Animator animator;
     private int _score = 0;
     private bool _invincible = false;
     private Vector3 _initialPos;
@@ -26,19 +25,11 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
 
     private GameObject _uiGo = null;
 
+    [SerializeField]
+    private Material _playerMaterial;
+
     public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
     {
-        if (stream.IsWriting)
-        {
-            // We own this player: send the others our data
-            stream.SendNext(_score);
-        }
-        else
-        {
-            // Network player, receive data
-            this._score = (int)stream.ReceiveNext();
-        }
-        // TODO: See to refactor this, checking two times the same thing
         if (stream.IsWriting)
         {
             // We own this player: send the others our data
@@ -63,8 +54,6 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
         // #Critical
         // we flag as don't destroy on load so that instance survives level synchronization, thus giving a seamless experience when levels load.
         DontDestroyOnLoad(this.gameObject);
-
-        animator = GetComponent<Animator>();
         _initialPos = new Vector3(0.5f, 0f, -10f);
     }
 
@@ -85,6 +74,9 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
         }
 
         _grid = FindObjectOfType<Grid>();
+
+        if (photonView.IsMine)
+            GetComponent<Renderer>().material = _playerMaterial;
     }
 
     // Update is called once per frame
@@ -172,8 +164,29 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
             if (_grid.MovementIsValid(transform.position, -1, 0))
                 _newTranslation = Vector3.left;
         }
-        if (!_isMoving)
-            _translation = _newTranslation;
+        if (!_isMoving && _newTranslation != Vector3.zero)
+        {
+            _translation = Vector3.up;
+            if (_newTranslation == Vector3.right)
+            {
+                transform.rotation = new Quaternion(0.707106829f, 0.707106829f, 0, 0);
+            }
+            
+            else if (_newTranslation == Vector3.left)
+            {
+                transform.rotation = new Quaternion(0, 0, 0.707106829f, 0.707106829f);
+            }
+            else if (_newTranslation == Vector3.forward)
+            {
+                transform.rotation = new Quaternion(0.5f, 0.5f, 0.5f, 0.5f);
+            }
+            else if (_newTranslation == Vector3.back)
+            {
+                transform.rotation = new Quaternion(-0.5f, -0.5f, 0.5f, 0.5f);
+            }
+
+        }
+            
     }
 
     private void ManageTranslation()
@@ -193,7 +206,7 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
         }
         else
         {
-            Vector2 newDir = new Vector2(_translation.x, _translation.z);
+            Vector2 newDir = new Vector2(_newTranslation.x, _newTranslation.z);
             // check the new position we are going to move, and set it as the target
             if (newDir.sqrMagnitude != 0 && _grid.MovementIsValid(transform.position, (int)newDir.x, (int)newDir.y))
             {
@@ -208,7 +221,7 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
                 else
                 {
                     _isMoving = true;
-                    _targetPos += _translation;
+                    _targetPos += _newTranslation;
                 }
             }
         }
@@ -220,7 +233,7 @@ public class PlayerController : MonoBehaviourPunCallbacks, IPunObservable
     {
         if (transform.position.x > 14 || transform.position.x < -14)
         {
-            float newX = transform.position.x * -1 + 0.1f * _translation.x;
+            float newX = transform.position.x * -1 + 0.1f * _newTranslation.x;
             transform.position = new Vector3(newX, transform.position.y, transform.position.z);
             _targetPos = transform.position;
             _isMoving = true;
